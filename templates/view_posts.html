@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Posts</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius:9px;
+        }
+        h2 {
+            color: #333;
+        }
+        .comments {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+        }
+
+        .comment {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .comment strong {
+            display: block;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .comment p {
+            margin: 0;
+            font-size: 14px;
+            color: #495057;
+        }
+        .post {
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: navajowhite;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .post-title {
+            margin-top: 0;
+            color: darkorange;
+            font-size: 20px; /* Make the title larger */
+        }
+        .post-username {
+            font-size: 12px;
+            color: #555; /* Slightly darker for better readability */
+            margin-bottom: 5px;
+        }
+        .post-content {
+            margin-bottom: 0;
+            font-size: 16px;
+        }
+        .comment-form textarea {
+            width: 100%;
+            height: 100%;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            resize: none;
+        }
+        .comment-form input[type="submit"] {
+            display: block;
+            margin-top: 5px;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 10px;
+            color: #ADD8E6;
+            font-family: cursive;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        a:hover {
+            background-color: #0056b3;
+        }
+        .flash-message {
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .flash-message.success {
+            color: #3c763d;
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+
+        .flash-message.error {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+        .btn {
+            padding: 8px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-comment {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-comment:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+    </style>
+</head>
+<body>
+    <h1> The Smart Company Posting Platform</h1>
+    <div class="container">
+            <!-- Flash messages display area -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+        <h2>All Posts</h2>
+        {% for post in posts %}
+        <div class="post">
+            <div class="post-title">{{ post.title }}</div>
+            <div class="post-username">Posted by: {{ post.username }}</div>
+            <p class="post-content">{{ post.message }}</p>
+             <!-- Display comments for this post -->
+            <div class="comments">
+                <h3>Comments:</h3>
+                {% for comment in post.comments %}
+                <div class="comment">
+                    <strong>{{ comment.username }}:</strong>
+                    <p>{{ comment.content }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            <!-- Add a comment form below each post -->
+            <form class="comment-form" action="/posts/{{ post._id }}/comment" method="POST">
+                <input type="hidden" name="post_id" value="{{ post._id }}">
+                <textarea name="comment" placeholder="Write a comment..." required></textarea>
+                <input type="submit" value="Post Comment" class="btn btn-comment">
+            </form>
+            {% if session.get('username') == post.username or session.get('admin') %}
+                <form action="{{ url_for('delete_post', post_id=post._id) }}" method="post" style="margin-top: 10px;">
+                    <button type="submit" class="btn btn-danger">Delete Post</button>
+                </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <a href="/post">Post a New Message</a>
+        <a href="/logout">Logout</a>
+    </div>
+</body>
+</html>
