@@ -80,10 +80,10 @@
             border-color: #ebccd1;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 </head>
 <body>
-
-    <form method="POST">
+    <form id="registerForm" method="POST" onsubmit="encryptRegisterForm(event)">
         <h2>User Register</h2>
         <label for="username">Username:</label><br>
         <input type="text" id="username" name="username" required><br>
@@ -101,5 +101,43 @@
         {% endwith %}
         <a href="#" onclick="window.history.back();return false;">Go Back</a>
     </form>
+    <script>
+        function encryptRegisterForm(event) {
+            event.preventDefault(); // Stop the form from submitting immediately
+
+            var form = event.target;
+            var passwordField = form.querySelector('input[name="password"]');
+            var key = CryptoJS.enc.Utf8.parse('1234567890123456'); // Example 16-byte key, should match server-side key
+            var iv = CryptoJS.lib.WordArray.random(16); // Generates a random 16-byte IV
+
+            // Encrypt the password using AES, the key, and IV
+            var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(passwordField.value), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7 // Ensure PKCS#7 padding is used
+            });
+
+            // Concatenate IV and Ciphertext as WordArray and encode as Base64
+            var combinedEncrypted = CryptoJS.enc.Base64.stringify(iv.concat(encrypted.ciphertext));
+
+            // Create a new hidden input to hold the encrypted password
+            var hiddenInput = document.createElement('input');
+            hiddenInput.setAttribute('type', 'hidden');
+            hiddenInput.setAttribute('name', 'encryptedPassword');
+            hiddenInput.value = combinedEncrypted;
+
+            form.appendChild(hiddenInput);
+
+            // Log encrypted data
+            console.log('IV (Base64):', CryptoJS.enc.Base64.stringify(iv));
+            console.log('Ciphertext (Base64):', encrypted.toString());
+            console.log('Combined Encrypted:', combinedEncrypted);
+
+            // Clear the original password field
+            passwordField.value = '';
+            form.submit(); // Submit the form
+        }
+
+    </script>
    </body>
 </html>

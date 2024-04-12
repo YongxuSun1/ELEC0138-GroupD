@@ -1,10 +1,16 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from pymongo.collection import Collection, ReturnDocument
 from bson.objectid import ObjectId
+
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import base64
+import hashlib
+
 import os
 
 app = Flask(__name__)
@@ -28,56 +34,73 @@ except Exception as e:
 def home():
     return render_template('index.html')
 
+def decrypt(encrypted_text):
+    key = b"1234567890123456"  # Ensure this is the same as in JavaScript
+    try:
+        print(f'encrypted_text: {encrypted_text}')
+        encrypted_bytes = base64.b64decode(encrypted_text)
+        iv = encrypted_bytes[:16]
+        ciphertext = encrypted_bytes[16:]
+        print(f'iv: {base64.b64encode(iv).decode('utf-8')}')
+        print(f'ciphertext: {base64.b64encode(ciphertext).decode('utf-8')}')
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        decrypted_padded_message = cipher.decrypt(ciphertext)
+        decrypted_message = unpad(decrypted_padded_message, AES.block_size, style='pkcs7')
+        print(f'decrypted_message: {decrypted_message.decode('utf-8')}')
+        return decrypted_message.decode('utf-8')
+    except (ValueError, KeyError) as e:
+        raise ValueError("Decryption failed due to: " + str(e))
+
 # USER LOGIN
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        encrypted_password = request.form['encryptedPassword']
+        try:
+            decrypted_password = decrypt(encrypted_password)
+        except ValueError as e:
+            flash(str(e), 'error')
+            return redirect(url_for('login'))
+        # Retrieve user from the database
         user = users_col.find_one({'username': username})
-        if user and user['password'] == password:
+        if user and check_password_hash(user['password'], decrypted_password):
+            print("found user")
             session['username'] = username
-            return redirect(url_for('view_posts'))
+            return redirect(url_for('view_posts'))  # Assuming 'view_posts' is a valid endpoint
         else:
-            flash('Invalid username or password','error')
+            flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# admin login
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = admin_col.find_one({'username': username})
-        if user and user['password'] == password:
-            session['admin'] = username
-            return redirect(url_for('admin_dashboard'))
-        else:
-            flash('Invalid admin username or password','error')
-            return redirect(url_for('admin_login'))
-    return render_template('admin_login.html')
-
-# Register
+# USER REGISTER 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
-
-        if not username or not password:
-            flash('Username and password cannot be empty.','error')
+        encrypted_password = request.form['encryptedPassword']  # This is the encrypted password sent from the client
+        try:
+            decrypted_password = decrypt(encrypted_password)
+        except ValueError as e:
+            flash(str(e), 'error')
             return redirect(url_for('register'))
+
+        if not username or not decrypted_password:
+            flash('Username and password cannot be empty.', 'error')
+            return redirect(url_for('register'))
+        
         user = users_col.find_one({'username': username})
         if user:
-            flash('Username already exists.','error')
+            flash('Username already exists.', 'error')
             return redirect(url_for('register'))
 
         else:
-            users_col.insert_one({'username': username, 'password': password})
-            flash('User registered successfully. Please login.','success')
+            hashed_password = generate_password_hash(decrypted_password)
+            users_col.insert_one({'username': username, 'password': hashed_password})
+            flash('User registered successfully. Please login.', 'success')
             return redirect(url_for('login'))
     return render_template('register.html')
+
 
 # post
 @app.route('/post', methods=['GET', 'POST'])
@@ -188,4 +211,4 @@ def delete_post(post_id):
     return redirect(url_for('view_posts'))
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=5000)
