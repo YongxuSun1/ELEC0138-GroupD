@@ -76,24 +76,48 @@
             margin: 5px 0;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 </head>
 <body>
-    <form method="POST">
-       <h2>User Login</h2>
-        Username: <input type="text" name="username"><br>
-        Password: <input type="password" name="password"><br>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <ul class="flashes">
-            {% for category, message in messages %}
-              <li style="{{ 'color: #4CAF50;' if category == 'success' else 'color: red;' if category == 'error' else 'color: #ffeb3b;' }}">{{ message }}</li>
-            {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
+    <form id="loginForm" method="POST" onsubmit="encryptLoginForm(event)">
+        <h2>User Login</h2>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br>
+        <input type="hidden" id="encryptedPassword" name="encryptedPassword">
+        <!-- Flask messages here -->
         <input type="submit" value="Login">
         <a href="/register" class="register-btn">Register</a>
         <a href="#" onclick="window.history.back();return false;">Go Back</a>
-    </form>
+    </form> 
+    <script>
+        function encryptLoginForm(event) {
+            event.preventDefault(); // Prevent form submission
+
+            var passwordField = document.getElementById('password');
+            var encryptedPasswordField = document.getElementById('encryptedPassword');
+
+            var key = CryptoJS.enc.Utf8.parse('1234567890123456'); // Ensure this is the same in Python
+            var iv = CryptoJS.lib.WordArray.random(16); // 16-byte IV for AES
+
+            var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(passwordField.value), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7 // Ensure PKCS#7 padding
+            });
+            console.log("IV (Base64):", CryptoJS.enc.Base64.stringify(iv));
+            console.log("Ciphertext (Base64):", encrypted.toString());
+            
+            // Base64 encode the IV and ciphertext together as the output
+            var base64Ciphertext = CryptoJS.enc.Base64.stringify(iv.concat(encrypted.ciphertext));
+            
+            encryptedPasswordField.value = base64Ciphertext;
+            console.log("Encrypted Password:", encryptedPasswordField.value)
+            passwordField.value = ''; // Clear the password field
+
+            document.getElementById('loginForm').submit(); // Uncomment this to submit the form
+        }
+    </script>
 </body>
 </html>
