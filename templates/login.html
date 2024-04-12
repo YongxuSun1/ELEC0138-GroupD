@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f2f2f2;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        input[type=text], input[type=password], input[name=captcha_input]{
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type=submit], a.register-btn {
+            box-sizing: border-box;
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            display: block;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        input[type=submit]:hover, a.register-btn:hover {
+            background-color: #45a049;
+            text-decoration: none;
+        }
+        a {
+            margin-top: 10px;
+            color: #007bff;
+            text-decoration: none;
+            align-self: center;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: #ffffff;
+            color: red;
+            margin: 5px 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $("#captcha-img").click(function(){
+                $(this).attr("src", "/captcha?" + (new Date()).getTime());
+            });
+        });
+    </script>
+</head>
+<body>
+    <form id="loginForm" method="POST" onsubmit="encryptLoginForm(event)">
+        <h2>User Login</h2>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br>
+        <input type="hidden" id="encryptedPassword" name="encryptedPassword">
+        Captcha: <img id="captcha-img" src="/captcha" alt="captcha" style="cursor:pointer;">
+        Captcha Input: <input type="text" name="captcha" style="width: 200px; height: 40px;"><br> <!-- Captcha input field -->
+        <ul>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </ul>
+        
+        <input type="submit" value="Login">
+        <a href="/register" class="register-btn">Register</a>
+        <a href="#" onclick="window.history.back();return false;">Go Back</a>
+    </form> 
+    <script>
+        function encryptLoginForm(event) {
+            event.preventDefault(); // Prevent form submission
+
+            var passwordField = document.getElementById('password');
+            var encryptedPasswordField = document.getElementById('encryptedPassword');
+
+            var key = CryptoJS.enc.Utf8.parse('1234567890123456'); // Ensure this is the same in Python
+            var iv = CryptoJS.lib.WordArray.random(16); // 16-byte IV for AES
+
+            var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(passwordField.value), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7 // Ensure PKCS#7 padding
+            });
+            // console.log("IV (Base64):", CryptoJS.enc.Base64.stringify(iv));
+            // console.log("Ciphertext (Base64):", encrypted.toString());
+            
+            // Base64 encode the IV and ciphertext together as the output
+            var base64Ciphertext = CryptoJS.enc.Base64.stringify(iv.concat(encrypted.ciphertext));
+            
+            encryptedPasswordField.value = base64Ciphertext;
+            console.log("Encrypted Password:", encryptedPasswordField.value)
+            passwordField.value = ''; // Clear the password field
+
+            document.getElementById('loginForm').submit(); // Uncomment this to submit the form
+        }
+    </script>
+</body>
+</html>
