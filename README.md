@@ -20,6 +20,8 @@ Before running the `main.py`, ensure you have the following packages installed:
 - pymongo
 - PyCryptodome
 - Pillow
+
+
 To set up the project, follow these steps:
 1. Clone the desired branch of the repository:
    For the original version:
