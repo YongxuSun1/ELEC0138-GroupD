@@ -32,9 +32,9 @@ To set up the project, follow these steps:
   ```
 
 2. Run the Flask application:
-   ```bash
-   python main.py
-   ```
+```bash
+python main.py
+```
   After starting the application, you can navigate to http://my-public-ip:5000 on your web browser to access the system.
 
 Security and Privacy
